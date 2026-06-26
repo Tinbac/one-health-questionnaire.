@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>One Health Questionnaire</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f4f7f6;
+            color: #333;
+            padding: 20px;
+            margin: 0;
+        }
+        .form-container {
+            max-width: 600px;
+            background: #ffffff;
+            margin: 20px auto;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        h2 {
+            color: #2c3e50;
+            margin-top: 0;
+            border-bottom: 2px solid #ecf0f1;
+            padding-bottom: 10px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #34495e;
+        }
+        input[type="text"], select, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+        .gps-button {
+            background-color: #27ae60;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            width: 100%;
+            margin-bottom: 15px;
+            transition: background-color 0.2s;
+        }
+        .gps-button:hover {
+            background-color: #219653;
+        }
+        .gps-button:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+        }
+        #gps-status {
+            font-size: 14px;
+            color: #7f8c8d;
+            margin-top: -10px;
+            margin-bottom: 15px;
+            display: block;
+        }
+        .submit-button {
+            background-color: #2980b9;
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 4px;
+            font-size: 18px;
+            width: 100%;
+            cursor: pointer;
+        }
+        .submit-button:hover {
+            background-color: #2471a3;
+        }
+    </style>
+</head>
+<body>
+
+<div class="form-container">
+    <h2>One Health Questionnaire</h2>
+    
+    <form id="questionnaireForm">
+        <!-- Metadata / GPS Section -->
+        <div class="form-group">
+            <label>Location Coordinates</label>
+            <button type="button" class="gps-button" id="getGPSBtn">📍 Auto-Fill Current GPS Location</button>
+            <span id="gps-status"></span>
+        </div>
+
+        <div class="form-group">
+            <label for="latitude">Latitude</label>
+            <input type="text" id="latitude" name="latitude" readonly placeholder="Click the button above">
+        </div>
+
+        <div class="form-group">
+            <label for="longitude">Longitude</label>
+            <input type="text" id="longitude" name="longitude" readonly placeholder="Click the button above">
+        </div>
+
+        <div class="form-group">
+            <label for="accuracy">GPS Accuracy (meters)</label>
+            <input type="text" id="accuracy" name="accuracy" readonly placeholder="Click the button above">
+        </div>
+
+        <hr style="border: 0; border-top: 1px solid #ecf0f1; margin: 30px 0;">
+
+        <!-- Sample One Health Questions (Modify as needed) -->
+        <div class="form-group">
+            <label for="respondent">Respondent Name / ID</label>
+            <input type="text" id="respondent" name="respondent" required>
+        </div>
+
+        <div class="form-group">
+            <label for="interface">Primary Human-Animal-Environment Interface observed:</label>
+            <select id="interface" name="interface">
+                <option value="">-- Select Option --</option>
+                <option value="domestic_livestock">Domestic Livestock Farming</option>
+                <option value="wildlife_boundary">Wildlife/Forest Boundary</option>
+                <option value="waste_management">Water/Waste Management Site</option>
+                <option value="urban_market">Live Animal Market</option>
+                <option value="other">Other</option>
+            </select>
+        </div>
+
+        <button type="submit" class="submit-button">Submit Questionnaire</button>
+    </form>
+</div>
+
+<script>
+    document.getElementById('getGPSBtn').addEventListener('click', function() {
+        const status = document.getElementById('gps-status');
+        const latInput = document.getElementById('latitude');
+        const lonInput = document.getElementById('longitude');
+        const accInput = document.getElementById('accuracy');
+        const btn = document.getElementById('getGPSBtn');
+
+        if (!navigator.geolocation) {
+            status.textContent = "❌ Geolocation is not supported by your browser.";
+            return;
+        }
+
+        status.textContent = "⏳ Locating... please wait.";
+        status.style.color = "#d35400";
+        btn.disabled = true;
+
+        // High accuracy configuration essential for field data collection
+        const options = {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0
+        };
+
+        navigator.geolocation.getCurrentPosition(
+            function(position) {
+                latInput.value = position.coords.latitude.toFixed(6);
+                lonInput.value = position.coords.longitude.toFixed(6);
+                accInput.value = position.coords.accuracy.toFixed(1);
+                
+                status.textContent = "✅ Location captured successfully!";
+                status.style.color = "#27ae60";
+                btn.disabled = false;
+            },
+            function(error) {
+                btn.disabled = false;
+                status.style.color = "#c0392b";
+                switch(error.code) {
+                    case error.PERMISSION_DENIED:
+                        status.textContent = "❌ Permission denied. Please allow location access in your browser settings.";
+                        break;
+                    case error.POSITION_UNAVAILABLE:
+                        status.textContent = "❌ Location information unavailable (Weak GPS signal).";
+                        break;
+                    case error.TIMEOUT:
+                        status.textContent = "❌ Request timed out before obtaining location.";
+                        break;
+                    default:
+                        status.textContent = "❌ An unknown error occurred.";
+                        break;
+                }
+            },
+            options
+        );
+    });
+
+    // Handle Form Submission
+    document.getElementById('questionnaireForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        // Handle your data logging or API delivery here
+        alert("Form ready for submission! Coordinates: " + document.getElementById('latitude').value + ", " + document.getElementById('longitude').value);
+    });
+</script>
+
+</body>
+</html>
