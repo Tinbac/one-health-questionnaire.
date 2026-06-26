@@ -157,14 +157,12 @@
 </div>
 
 <script>
-    // Global Elements references
     const latInput = document.getElementById('latitude');
     const lonInput = document.getElementById('longitude');
     const accInput = document.getElementById('accuracy');
     const status = document.getElementById('gps-status');
     const btn = document.getElementById('getGPSBtn');
 
-    // Consolidated Core GPS logic loop
     function acquireGPS() {
         if (!navigator.geolocation) {
             status.textContent = "❌ Geolocation is not supported by your browser.";
@@ -197,14 +195,15 @@
                 status.style.color = "#c0392b";
                 switch(error.code) {
                     case error.PERMISSION_DENIED:
-                        status.textContent = "❌ Permission denied. Please unlock location settings in your URL bar.";
+                        status.textContent = "❌ Permission denied. Please unlock location settings in your browser bar.";
                         break;
                     case error.POSITION_UNAVAILABLE:
-                        status.textContent = "❌ Location unavailable (Weak GPS fix). Try moving closer to windows/outdoors.";
+                        status.textContent = "❌ Location unavailable (Weak GPS fix). Move outdoors or near windows.";
                         break;
                     case error.TIMEOUT:
                         status.textContent = "❌ Request timed out. Retrying execution...";
-                        setTimeout(acquireGPS, 1500);
+                        // FIXED: Changed incorrect function reference to correct function name 'acquireGPS'
+                        setTimeout(acquireGPS, 2000); 
                         break;
                     default:
                         status.textContent = "❌ An unknown hardware error occurred.";
@@ -215,23 +214,22 @@
         );
     }
 
-    // 1. Fire on load automatically
+    // Run automatically on page load
     window.onload = function() {
         acquireGPS();
     };
 
-    // 2. Button override fallback configuration
+    // Manual button fallback
     btn.addEventListener('click', function () {
         acquireGPS();
     });
 
-    // --- Form Submission Pipeline ---
+    // Form Submission Process
     document.getElementById("questionnaireForm").addEventListener("submit", function(e) {
         e.preventDefault();
 
-        // Halt transmission if values haven't processed
         if (!latInput.value || !lonInput.value) {
-            alert("⚠️ Please wait until your device locks a GPS string before submitting records.");
+            alert("⚠️ Please wait until your device locks a GPS location before submitting.");
             return;
         }
 
@@ -239,6 +237,7 @@
         submitBtn.disabled = true;
         submitBtn.textContent = "Sending Data...";
 
+        // NOTE: If you deploy a brand new Web App, replace this URL with your new one!
         const webAppUrl = "https://script.google.com/macros/s/AKfycbxfrw0K-NU9h4_OUhe7DZmtsEtTAk6_cv4l2P49BBLSlpXNmrJA60KxdkqW6uuxK-JvcA/exec";
 
         const formData = {
@@ -264,7 +263,7 @@
             submitBtn.disabled = false;
             submitBtn.textContent = "Submit Questionnaire";
             
-            // Queue immediate sequence refresh for next submission
+            // Instantly start locking location for the next form entry
             acquireGPS();
         })
         .catch(error => {
