@@ -115,22 +115,22 @@
         <div class="form-group">
             <label>Location Coordinates</label>
             <button type="button" class="gps-button" id="getGPSBtn">📍 Auto-Fill Current GPS Location</button>
-            <span id="gps-status"></span>
+            <span id="gps-status">⏳ Initializing automated GPS request...</span>
         </div>
 
         <div class="form-group">
             <label for="latitude">Latitude</label>
-            <input type="text" id="latitude" name="latitude" readonly placeholder="Click the button above">
+            <input type="text" id="latitude" name="latitude" readonly placeholder="Waiting for GPS entry...">
         </div>
 
         <div class="form-group">
             <label for="longitude">Longitude</label>
-            <input type="text" id="longitude" name="longitude" readonly placeholder="Click the button above">
+            <input type="text" id="longitude" name="longitude" readonly placeholder="Waiting for GPS entry...">
         </div>
 
         <div class="form-group">
             <label for="accuracy">GPS Accuracy (meters)</label>
-            <input type="text" id="accuracy" name="accuracy" readonly placeholder="Click the button above">
+            <input type="text" id="accuracy" name="accuracy" readonly placeholder="Waiting for GPS entry...">
         </div>
 
         <hr style="border: 0; border-top: 1px solid #ecf0f1; margin: 30px 0;">
@@ -157,27 +157,28 @@
 </div>
 
 <script>
-    // --- GPS Logic ---
-    document.getElementById('getGPSBtn').addEventListener('click', function () {
-        const status = document.getElementById('gps-status');
-        const latInput = document.getElementById('latitude');
-        const lonInput = document.getElementById('longitude');
-        const accInput = document.getElementById('accuracy');
-        const btn = document.getElementById('getGPSBtn');
+    // Global Elements references
+    const latInput = document.getElementById('latitude');
+    const lonInput = document.getElementById('longitude');
+    const accInput = document.getElementById('accuracy');
+    const status = document.getElementById('gps-status');
+    const btn = document.getElementById('getGPSBtn');
 
+    // Consolidated Core GPS logic loop
+    function acquireGPS() {
         if (!navigator.geolocation) {
             status.textContent = "❌ Geolocation is not supported by your browser.";
             status.style.color = "#c0392b";
             return;
         }
 
-        status.textContent = "⏳ Locating... please wait.";
+        status.textContent = "⏳ Automatically locating... please wait.";
         status.style.color = "#d35400";
         btn.disabled = true;
 
         const options = {
             enableHighAccuracy: true,
-            timeout: 10000,
+            timeout: 15000, 
             maximumAge: 0
         };
 
@@ -196,37 +197,54 @@
                 status.style.color = "#c0392b";
                 switch(error.code) {
                     case error.PERMISSION_DENIED:
-                        status.textContent = "❌ Permission denied. Please allow location access in browser.";
+                        status.textContent = "❌ Permission denied. Please unlock location settings in your URL bar.";
                         break;
                     case error.POSITION_UNAVAILABLE:
-                        status.textContent = "❌ Location unavailable (Weak GPS signal).";
+                        status.textContent = "❌ Location unavailable (Weak GPS fix). Try moving closer to windows/outdoors.";
                         break;
                     case error.TIMEOUT:
-                        status.textContent = "❌ Request timed out before obtaining location.";
+                        status.textContent = "❌ Request timed out. Retrying execution...";
+                        setTimeout(acquireGPS, 1500);
                         break;
                     default:
-                        status.textContent = "❌ An unknown error occurred.";
+                        status.textContent = "❌ An unknown hardware error occurred.";
                         break;
                 }
             },
             options
         );
+    }
+
+    // 1. Fire on load automatically
+    window.onload = function() {
+        acquireGPS();
+    };
+
+    // 2. Button override fallback configuration
+    btn.addEventListener('click', function () {
+        acquireGPS();
     });
 
-    // --- Form Submission Logic ---
+    // --- Form Submission Pipeline ---
     document.getElementById("questionnaireForm").addEventListener("submit", function(e) {
         e.preventDefault();
+
+        // Halt transmission if values haven't processed
+        if (!latInput.value || !lonInput.value) {
+            alert("⚠️ Please wait until your device locks a GPS string before submitting records.");
+            return;
+        }
 
         const submitBtn = document.getElementById("submitBtn");
         submitBtn.disabled = true;
         submitBtn.textContent = "Sending Data...";
 
-        const webAppUrl = "https://script.google.com/macros/s/AKfycbxdFrkAG9lMsETzt21ESUorJWKdZWad3G7hoZITJKzWeGbEuR3HpG-Dwo6YyW2xExnFQA/exec";
+        const webAppUrl = "https://script.google.com/macros/s/AKfycbxfrw0K-NU9h4_OUhe7DZmtsEtTAk6_cv4l2P49BBLSlpXNmrJA60KxdkqW6uuxK-JvcA/exec";
 
         const formData = {
-            latitude: document.getElementById("latitude").value,
-            longitude: document.getElementById("longitude").value,
-            accuracy: document.getElementById("accuracy").value,
+            latitude: latInput.value,
+            longitude: lonInput.value,
+            accuracy: accInput.value,
             respondent: document.getElementById("respondent").value,
             interface: document.getElementById("interface").value
         };
@@ -242,12 +260,15 @@
         .then(() => {
             alert("✅ Questionnaire submitted successfully!");
             document.getElementById("questionnaireForm").reset();
-            document.getElementById("gps-status").textContent = "";
+            status.textContent = "";
             submitBtn.disabled = false;
             submitBtn.textContent = "Submit Questionnaire";
+            
+            // Queue immediate sequence refresh for next submission
+            acquireGPS();
         })
         .catch(error => {
-            alert("❌ Submission error: " + error);
+            alert("❌ Submission error encountered: " + error);
             submitBtn.disabled = false;
             submitBtn.textContent = "Submit Questionnaire";
         });
